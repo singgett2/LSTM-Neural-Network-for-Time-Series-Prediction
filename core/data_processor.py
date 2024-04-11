@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 class DataLoader():
     """A class for loading and transforming data for the lstm model"""
@@ -13,6 +14,9 @@ class DataLoader():
         self.len_train  = len(self.data_train)
         self.len_test   = len(self.data_test)
         self.len_train_windows = None
+        self.base_values = None
+        self.scaler = MinMaxScaler(feature_range=(0,1))
+        self.data_test_y = None
 
     def get_test_data(self, seq_len, normalise):
         '''
@@ -26,6 +30,28 @@ class DataLoader():
 
         data_windows = np.array(data_windows).astype(float)
         data_windows = self.normalise_windows(data_windows, single_window=False) if normalise else data_windows
+
+        x = data_windows[:, :-1]
+        y = data_windows[:, -1, [0]]
+        return x,y
+
+    def get_test_data_2(self, seq_len, normalise):
+        '''
+        Create x, y test data windows
+        Warning: batch method, not generative, make sure you have enough memory to
+        load data, otherwise reduce size of the training split.
+        '''
+        data_windows = []
+        data_y = []
+        for i in range(self.len_test - seq_len):
+            window = self.data_test[i:i+seq_len]
+            data_y.append(window)
+            window = self.scaler.fit_transform(window)
+            data_windows.append(window)
+
+        data_windows = np.array(data_windows).astype(float)
+        data_y = np.array(data_y)
+        self.data_test_y = data_y[:, -1, [0]]
 
         x = data_windows[:, :-1]
         y = data_windows[:, -1, [0]]
@@ -62,6 +88,26 @@ class DataLoader():
                 i += 1
             yield np.array(x_batch), np.array(y_batch)
 
+    def generate_train_batch_2(self, seq_len, batch_size, normalise):
+        '''Yield a generator of training data from filename on given list of cols split for train/test'''
+        i = 0
+        while i < (self.len_train - seq_len):
+            x_batch = []
+            y_batch = []
+            for b in range(batch_size):
+                if i >= (self.len_train - seq_len):
+                    # stop-condition for a smaller final batch if data doesn't divide evenly
+                    yield np.array(x_batch), np.array(y_batch)
+                    i = 0
+                # x, y = self._next_window_2(i, seq_len, normalise)
+                data = self.scaler.fit_transform(np.array(self.data_train[i:i+seq_len]))
+                x = data[:-1]
+                y = data[-1,0]
+                x_batch.append(x)
+                y_batch.append(y)
+                i += 1
+            yield np.array(x_batch), np.array(y_batch)
+
     def _next_window(self, i, seq_len, normalise):
         '''Generates the next data window from the given index location i'''
         window = self.data_train[i:i+seq_len]
@@ -74,11 +120,39 @@ class DataLoader():
         '''Normalise window with a base value of zero'''
         normalised_data = []
         window_data = [window_data] if single_window else window_data
+
         for window in window_data:
             normalised_window = []
+            if self.base_values is None:
+                self.base_values = window_data[0]
             for col_i in range(window.shape[1]):
                 normalised_col = [((float(p) / float(window[0, col_i])) - 1) for p in window[:, col_i]]
                 normalised_window.append(normalised_col)
             normalised_window = np.array(normalised_window).T # reshape and transpose array back into original multidimensional format
             normalised_data.append(normalised_window)
         return np.array(normalised_data)
+
+    def normalise_windows_2(self, window_data, single_window=False):
+        '''Normalise window with a base value of zero'''
+        normalised_data = []
+        window_data = [window_data] if single_window else window_data
+
+        for window in window_data:
+            normalised_window = []
+
+
+            if self.base_values is None:
+                self.base_values = window_data[0]
+            for col_i in range(window.shape[1]):
+                normalised_col = [((float(p) / float(window[0, col_i])) - 1) for p in window[:, col_i]]
+                normalised_window.append(normalised_col)
+            normalised_window = self.scaler.fit_transform(window) # reshape and transpose array back into original multidimensional format
+            normalised_data.append(normalised_window)
+        return np.array(normalised_data)
+
+    def denormalize(self, datas):
+        res = self.scaler.inverse_transform(datas)
+        return res
+
+
+
