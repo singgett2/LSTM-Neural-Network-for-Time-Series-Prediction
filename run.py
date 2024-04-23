@@ -37,59 +37,9 @@ def plot_results_multiple(predicted_data, true_data, prediction_len, filename):
     plt.show()
 
 
-def use_model():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    configs = json.load(open('config.json', 'r'))
-    if not os.path.exists(configs['model']['save_dir']): os.makedirs(configs['model']['save_dir'])
-
-    model = Model()
-    model.load_model("saved_models/29032024-020959-e2.h5")
-
-    '''
-    data = DataLoader(
-        "data/gudao_utf8.csv",
-        0,
-        "该运维内容对应次数"
-    )
-    '''
-    data = DataLoader(
-        os.path.join('data', configs['data']['filename']),
-        configs['data']['train_test_split'],
-        configs['data']['columns']
-    )
-
-    # steps_per_epoch = math.ceil(
-    #     (data.len_train - configs['data']['sequence_length']) / configs['training']['batch_size'])
-    # model.train_generator(
-    #     data_gen=data.generate_train_batch(
-    #         seq_len=configs['data']['sequence_length'],
-    #         batch_size=configs['training']['batch_size'],
-    #         normalise=configs['data']['normalise']
-    #     ),
-    #     epochs=configs['training']['epochs'],
-    #     batch_size=configs['training']['batch_size'],
-    #     steps_per_epoch=steps_per_epoch,
-    #     save_dir=configs['model']['save_dir']
-    # )
-
-    # x_test, y_test = data.get_test_data(
-    #     seq_len=configs['data']['sequence_length'],
-    #     normalise=configs['data']['normalise']
-    # )
-
-    x_test, y_test = data.get_test_data_for_point_by_point()
-
-    # predictions = model.predict_sequences_multiple(x_test, configs['data']['sequence_length'], configs['data']['sequence_length'])
-    # predictions = model.predict_sequence_full(x_test, configs['data']['sequence_length'])
-    predictions = model.predict_point_by_point(x_test)
-
-    # plot_results_multiple(predictions, y_test, configs['data']['sequence_length'], configs['data']['filename'])
-    plot_results(predictions, y_test, configs['data']['filename'])
-
-
 def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    configs = json.load(open('config1.json', 'r'))
+    configs = json.load(open('孤岛采油厂采油管理六区.json', 'r'))
     if not os.path.exists(configs['model']['save_dir']): os.makedirs(configs['model']['save_dir'])
 
     data = DataLoader(
@@ -149,20 +99,48 @@ def main():
     # 将预测值进行反归一化
     predictions = data.denormalize(predictions)
     # 将预测值转换为整型(四舍五入)
-    predictions_int = np.round(predictions).astype(int)
+    # predictions_int = np.round(predictions).astype(int)
 
     y_test = data.denormalize(y_test.reshape(-1, 1))
+    datad = np.concatenate((y_test, predictions), axis=1)
 
-    datad = np.concatenate((data.data_test_y, predictions_int), axis=1)
+    dataplt = pd.read_csv(os.path.join('data', configs['data']['filename']), encoding='GB2312')
+    train_test_split = configs['data']['train_test_split']
+    plt_size = int(len(dataplt) * train_test_split)
+    plttest = dataplt[plt_size:-50]
+    pltx = plttest['年 / 周']
+    pltnums = plttest['仪表数量']
+    plttimes = plttest['运维次数']
+
+    predictions_values = predictions * np.array(pltnums).reshape(-1,1)
+    predictions_values = np.round(predictions_values).astype(int)
+    datad = np.concatenate((np.array(pltx).reshape(-1,1)[-10:],np.array(plttimes).reshape(-1,1)[-10:], predictions_values[-10:]), axis=1)
+    # 绘图
+    plt.figure(figsize=(10, 6))
+
+    # 绘制“运维次数”线
+    plt.plot(np.array(pltx)[-10:], np.array(plttimes)[-10:], label='real')
+
+    # 绘制预测值与“仪表数量”相乘的结果线
+    plt.plot(np.array(pltx)[-10:], np.array(predictions_values)[-10:], label='prediction')
+
+    plt.xlabel('year-week')
+    plt.ylabel('Values')
+    plt.title(configs['data']['title'])
+    plt.xticks(rotation=90)
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(configs['data']['filename'].replace(".", "_"))
+    plt.show()
 
     # 创建一个 DataFrame
-    dataf = pd.DataFrame(datad, columns=['True Values', 'Predictions'])
-
+    dataf = pd.DataFrame(datad, columns=['年 / 周', '真实运维次数', '预测运维次数'])
+    # dataf = np.concatenate(dataf, predictions_values)
     # 将数据保存到 CSV 文件
-    dataf.to_csv('predictions.csv', index=False)
+    dataf.to_csv(configs['data']['filename'], index=False, encoding='GB2312')
 
     # plot_results_multiple(predictions, y_test, configs['data']['sequence_length'], configs['data']['filename'])
-    plot_results(predictions_int, y_test, configs['data']['filename'])
+    # plot_results(predictions, y_test, configs['data']['filename'])
 
 
 if __name__ == '__main__':

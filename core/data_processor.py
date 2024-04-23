@@ -7,7 +7,7 @@ class DataLoader():
     """A class for loading and transforming data for the lstm model"""
 
     def __init__(self, filename, split, cols):
-        dataframe = pd.read_csv(filename)
+        dataframe = pd.read_csv(filename, encoding='GB2312')
         i_split = int(len(dataframe) * split)
         self.data_train = dataframe.get(cols).values[:i_split]
         self.data_test  = dataframe.get(cols).values[i_split:]
@@ -15,7 +15,7 @@ class DataLoader():
         self.len_test   = len(self.data_test)
         self.len_train_windows = None
         self.base_values = None
-        self.scaler = MinMaxScaler(feature_range=(0,1))
+        self.scaler = MinMaxScaler(feature_range=(-1, 1))
         self.data_test_y = None
 
     def get_test_data(self, seq_len, normalise):
@@ -50,8 +50,8 @@ class DataLoader():
             data_windows.append(window)
 
         data_windows = np.array(data_windows).astype(float)
-        data_y = np.array(data_y)
-        self.data_test_y = data_y[:, -1, [0]]
+        # data_y = np.array(data_y)
+        # self.data_test_y = data_y[:, -1, [0]]
 
         x = data_windows[:, :-1]
         y = data_windows[:, -1, [0]]

@@ -1,8 +1,8 @@
 {
 	"data": {
-		"filename": "sp500_1.csv",
+		"filename": "datas_1.csv",
 		"columns": [
-			"Close"
+			"单位仪表该运维内容对应次数"
 		],
 		"sequence_length": 50,
 		"train_test_split": 0.8,

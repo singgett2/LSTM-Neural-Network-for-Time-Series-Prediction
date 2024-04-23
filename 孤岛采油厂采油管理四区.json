@@ -1,11 +1,12 @@
 {
 	"data": {
-		"filename": "sp500_1.csv",
+		"filename": "孤岛采油厂采油管理四区.CSV",
+		"title": "gudao4wenyabian",
 		"columns": [
-			"Close"
+			"单位仪器运维次数"
 		],
 		"sequence_length": 50,
-		"train_test_split": 0.8,
+		"train_test_split": 0.94,
 		"normalise": true
 	},
 	"training": {
