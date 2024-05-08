@@ -7,7 +7,7 @@ class DataLoader():
     """A class for loading and transforming data for the lstm model"""
 
     def __init__(self, filename, split, cols):
-        dataframe = pd.read_csv(filename, encoding='GB2312')
+        dataframe = pd.read_csv(filename)
         i_split = int(len(dataframe) * split)
         self.data_train = dataframe.get(cols).values[:i_split]
         self.data_test  = dataframe.get(cols).values[i_split:]

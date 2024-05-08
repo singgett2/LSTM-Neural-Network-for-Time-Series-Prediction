@@ -93,6 +93,13 @@ class Model():
 		predicted = np.reshape(predicted, (predicted.size,))
 		return predicted
 
+	def predict_point_by_point_2(self, data, steps):
+		#Predict each timestep given the last sequence of true data, in effect only predicting 1 step ahead each time
+		print('[Model] Predicting Point-by-Point...')
+		predicted = self.model.predict(data)
+		predicted = np.reshape(predicted, (predicted.size,))
+		return predicted
+
 	def predict_sequences_multiple(self, data, window_size, prediction_len):
 		#Predict sequence of 50 steps before shifting prediction run forward by 50 steps
 		print('[Model] Predicting Sequences Multiple...')
